@@ -40,4 +40,4 @@ def ingest_data():
     datuframo = datuframo.append(dictionary, ignore_index=True)
     datuframo['principales_palabras_clave'] = datuframo['principales_palabras_clave'].str.rstrip('\.')
     
-    return df
+    return datuframo
