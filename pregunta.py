@@ -10,34 +10,42 @@ espacio entre palabra y palabra.
 
 """
 import pandas as pd
+import re
 
 def ingest_data():
-
-    import re
-
-    cont = 0
-    dictionary = {}
-    datuframo = pd.DataFrame()
+    df = open('clusters_report.txt', 'r')
+    lineASIE = re.sub("\s{3,}", "  ", df.readline().strip()).split("  ")
+    lineMiravo = df.readline().replace("\n", "").strip().split("  ")
+    for i in range(len(lineASIE)):
+      lineASIE[i] = (lineASIE[i].strip().lower()).replace(" ", "_")
+      if i == 1 or i == 2:
+        lineASIE[i] = (lineASIE[i] + ' ' + lineMiravo[i-1].lower()).replace(" ", "_")
+    df.readline(), df.readline()
+    documento = df.readlines()
+    content = []
+    texto = ''
+    for line in documento:
+      line = re.sub(r"\s{2,}", " ", line.strip()).replace('\n', '')
+      line += ' '
+      if '%' in line:
+        if texto != '': 
+          aux = content.pop()
+          texto = texto.replace('.', '').strip()
+          aux[3] = aux[3] + texto
+          content.append(aux)
+          texto = ''
+        indice = line.index('%')
+        sublista = line[:indice].strip().replace(',', '.').split(" ")
+        content.append(sublista + [line[indice + 2:]])
+      else:
+        texto += line
+    aux = content.pop()
+    texto = texto.replace('.', '').strip()
+    aux[3] = aux[3] + texto
+    content.append(aux)
+    dataframe = pd.DataFrame(content, columns = lineASIE)
+    dataframe['cluster'] = dataframe['cluster'].astype('int64')
+    dataframe['cantidad_de_palabras_clave'] = dataframe['cantidad_de_palabras_clave'].astype('int64')
+    dataframe['porcentaje_de_palabras_clave'] = dataframe['porcentaje_de_palabras_clave'].astype('float64')
     
-    with open('./clusters_report.txt') as data:
-        for line in data:
-            line = re.sub(r"\s+", " ", line)
-            if len(line)>1 and cont > 3:
-                if line.split()[0].isnumeric() == True:
-                    try: 
-                        dictionary['principales_palabras_clave'] = ' '.join(dictionary['principales_palabras_clave'])
-                        datuframo = datuframo.append(dictionary, ignore_index=True)
-                    except: pass
-                    dictionary = {'cluster': int(line.split()[0]),
-                                'cantidad_de_palabras_clave': int(line.split()[1]),
-                                'porcentaje_de_palabras_clave': float(line.split()[2].replace(',','.')),
-                                'principales_palabras_clave': line.split()[4:]}
-                else: 
-                    dictionary['principales_palabras_clave'].append(' '.join(line.split()))   
-            cont += 1
-
-    dictionary['principales_palabras_clave'] = ' '.join(dictionary['principales_palabras_clave'])
-    datuframo = datuframo.append(dictionary, ignore_index=True)
-    datuframo['principales_palabras_clave'] = datuframo['principales_palabras_clave'].str.rstrip('\.')
-    
-    return datuframo
+    return dataframe
